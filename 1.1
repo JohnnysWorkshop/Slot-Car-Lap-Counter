@@ -53,7 +53,7 @@ void loop()
         TimeOfLastLap[lane] = millis();
         newData = true;
 
-        lcd.setCursor(16, lane);
+        lcd.setCursor(0, lane);
         lcd.print(LapCounter[lane]);
       }
     }
