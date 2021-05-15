@@ -58,4 +58,7 @@ void loop()
       }
     }
   }
+  // If nobody finished a lap, we're done
+  if (!newData)
+    return;
 }
