@@ -1,0 +1,61 @@
+//*****************************************************************
+//*************Credits to John Wasser for help with logic**********
+//*****************************************************************
+
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x3F,20,4);
+
+const byte LaneCount = 4;
+const byte LaneSensorPins[LaneCount] = {8, 9, 10, 11};
+
+// Global variables default to zero
+boolean LanePreviousState[LaneCount];
+int LapCounter[LaneCount];
+unsigned long TimeOfLastLap[LaneCount];
+int LanePosition[LaneCount];
+
+void setup()
+{
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("********************");
+  lcd.setCursor(1,1);
+  lcd.print("Johnny's  Workshop");
+  lcd.setCursor(0,2);
+  lcd.print("Slot Car Lap Counter");
+  lcd.setCursor(0,3);
+  lcd.print("********************");
+  delay(2000);
+  lcd.clear();
+  
+  for (int lane = 0; lane < LaneCount; lane++)
+    pinMode(LaneSensorPins[lane], INPUT_PULLUP);
+}
+
+void loop()
+{
+  boolean newData = false;  // Set when a lap crossing happens
+
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    boolean laneState = digitalRead(LaneSensorPins[lane]) == LOW;
+
+    if (laneState != LanePreviousState[lane])
+    {
+      LanePreviousState[lane] = laneState;
+
+      if (laneState)  // Just went active
+      {
+        LapCounter[lane]++;
+        TimeOfLastLap[lane] = millis();
+        newData = true;
+
+        lcd.setCursor(16, lane);
+        lcd.print(LapCounter[lane]);
+      }
+    }
+  }
+}
