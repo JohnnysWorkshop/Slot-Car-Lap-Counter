@@ -1,0 +1,93 @@
+//*****************************************************************
+//*************Credits to John Wasser for helping with logic**********
+//*****************************************************************
+
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x3F, 20, 4);
+
+const byte LaneCount = 4;
+const char *PlaceNames[LaneCount] = {"P1", "P2", "P3", "P4"};
+const byte LaneSensorPins[LaneCount] = {8, 9, 10, 11};
+
+// Global variables default to zero
+boolean LanePreviousState[LaneCount];
+int LapCounter[LaneCount];
+unsigned long TimeOfLastLap[LaneCount];
+int LanePosition[LaneCount];
+
+
+void setup()
+{
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+  for (int lane = 0; lane < LaneCount; lane++)
+    pinMode(LaneSensorPins[lane], INPUT_PULLUP);
+}
+
+void loop()
+{
+  boolean newData = false;  // Set when a lap crossing happens
+
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    boolean laneState = digitalRead(LaneSensorPins[lane]) == LOW;
+
+    if (laneState != LanePreviousState[lane])
+    {
+      LanePreviousState[lane] = laneState;
+
+      if (laneState)  // Just went active
+      {
+        LapCounter[lane]++;
+        TimeOfLastLap[lane] = millis();
+        newData = true;
+
+        lcd.setCursor(0, lane);
+        lcd.print(LapCounter[lane]);
+      }
+    }
+  }
+
+  // If nobody finished a lap, we're done
+  if (!newData)
+    return;
+
+  // Determine the positions.
+  // Compare each lane with the other lanes to count how many are ahead of them
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    int aheadOfMe = 0;
+    for (int otherLane = 0; otherLane < LaneCount; otherLane++)
+    {
+      // Skip comparing a lane to itself
+      if (lane == otherLane)
+        continue;
+
+      // If they have gone more laps, they are ahead of me
+      if (LapCounter[lane] < LapCounter[otherLane])
+      {
+        aheadOfMe++;
+        continue;
+      }
+      else
+        // If they have gone the same number of laps but
+        // they got there first, they're ahead of me.
+        if (LapCounter[lane] == LapCounter[otherLane] &&
+            TimeOfLastLap[lane] > TimeOfLastLap[otherLane])
+        {
+          aheadOfMe++;
+          continue;
+        }
+    }
+
+    // Compared against all other lanes so 'aheadOfMe gives my position
+    LanePosition[lane] = aheadOfMe;
+
+    // Display the position for this lane
+    lcd.setCursor(18, lane);
+    lcd.print(PlaceNames[LanePosition[lane]]);
+  }
+}
