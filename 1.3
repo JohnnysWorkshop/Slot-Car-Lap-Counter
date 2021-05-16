@@ -64,7 +64,7 @@ void setup()
 
   for (int lane = 0; lane < laneCount; lane++)
   {
-    pinMode(laneSensorPins[lane], INPUT_PULLUP);
+    pinMode(laneSensorPins[lane], INPUT_PULLUP);//Change it to INPUT if using an optocoupler
 //***********NEW CODE*****************
 //This will set the timing variables
     carStart[lane] = millis();
@@ -82,7 +82,7 @@ void loop()
 
   for (int lane = 0; lane < laneCount; lane++)
   {
-    boolean laneState = digitalRead(laneSensorPins[lane]) == LOW;
+    boolean laneState = digitalRead(laneSensorPins[lane]) == LOW;//Change it to HIGH if using an optocoupler
 
     if (laneState != lanePreviousState[lane])
     {
