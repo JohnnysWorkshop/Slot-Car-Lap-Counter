@@ -21,26 +21,29 @@
 #include <Wire.h>
 LiquidCrystal_I2C lcd(0x3F,20,4);
 
-const byte LaneCount = 4;
-const char *PlaceNames[] = {"P1", "P2", "P3", "P4"};
-const byte LaneSensorPins[] = {8, 9, 10, 11};
+//This array arrangement has changed a little bit
+//to allow us to change the number of lanes in use.
+const byte laneCount = 4;
+const char *placeNames[] = {"P1", "P2", "P3", "P4"};
+const byte laneSensorPins[] = {8, 9, 10, 11};
 
 // Global variables default to zero
-boolean LanePreviousState[LaneCount];
-int LapCounter[LaneCount];
-unsigned long TimeOfLastLap[LaneCount];
-int LanePosition[LaneCount];
+boolean lanePreviousState[laneCount];
+int lapCounter[laneCount];
+unsigned long timeOfLastLap[laneCount];
+int lanePosition[laneCount];
 
 //****NEW CODE******
-int lanePeriod[LaneCount];
-unsigned long timeNow[LaneCount];
-unsigned long carTimeLap[LaneCount];
-unsigned long carStart[LaneCount];
-unsigned long carBest[LaneCount];
-float lastLap[LaneCount];
-float bestLap[LaneCount];
-boolean firstLap[LaneCount];
-boolean newBest[LaneCount];
+//Timing variables
+int lanePeriod[laneCount];
+unsigned long timeNow[laneCount];
+unsigned long carTimeLap[laneCount];
+unsigned long carStart[laneCount];
+unsigned long carBest[laneCount];
+float lastLap[laneCount];
+float bestLap[laneCount];
+boolean firstLap[laneCount];
+boolean newBest[laneCount];
 //******************
 
 void setup()
@@ -48,21 +51,22 @@ void setup()
   lcd.init();
   lcd.backlight();
   lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("********************");
-  lcd.setCursor(1,1);
-  lcd.print("Johnny's  Workshop");
-  lcd.setCursor(0,2);
-  lcd.print("Slot Car Lap Counter");
-  lcd.setCursor(0,3);
-  lcd.print("********************");
-  delay(2000);
-  lcd.clear();
-  
-  for (int lane = 0; lane < LaneCount; lane++)
+  lcd.setCursor(0,0);                 //This displays a welcome message
+  lcd.print("********************");  //
+  lcd.setCursor(1,1);                 //
+  lcd.print("Johnny's  Workshop");    //
+  lcd.setCursor(0,2);                 //
+  lcd.print("Slot Car Lap Counter");  //
+  lcd.setCursor(0,3);                 //
+  lcd.print("********************");  //*******************************
+  delay(2000);  //This delay() and clear() are only useful
+  lcd.clear();  //if you wish to display a welcome message.
+
+  for (int lane = 0; lane < laneCount; lane++)
   {
-    pinMode(LaneSensorPins[lane], INPUT_PULLUP);
+    pinMode(laneSensorPins[lane], INPUT_PULLUP);
 //***********NEW CODE*****************
+//This will set the timing variables
     carStart[lane] = millis();
     carBest[lane] = 9999;
     lastLap[lane] = 00.00;
@@ -76,23 +80,26 @@ void loop()
 {
   boolean newData = false;  // Set when a lap crossing happens
 
-  for (int lane = 0; lane < LaneCount; lane++)
+  for (int lane = 0; lane < laneCount; lane++)
   {
-    boolean laneState = digitalRead(LaneSensorPins[lane]) == LOW;
+    boolean laneState = digitalRead(laneSensorPins[lane]) == LOW;
 
-    if (laneState != LanePreviousState[lane])
+    if (laneState != lanePreviousState[lane])
     {
-      LanePreviousState[lane] = laneState;
+      lanePreviousState[lane] = laneState;
 
       if (laneState)  // Just went active
       {
-        LapCounter[lane]++;
-        TimeOfLastLap[lane] = millis();
+        lapCounter[lane]++;
+        timeOfLastLap[lane] = millis();
         newData = true;
         lcd.setCursor(0, lane);
-        lcd.print(LapCounter[lane]);
+        lcd.print(lapCounter[lane]);
 
 //********NEW CODE*******************************************************
+//The timing method came from an older project,
+//it's been modified to suit the current layout.
+//***********************************************************************
         timeNow[lane] = millis();
         carTimeLap[lane] = millis() - carStart[lane];
         carStart[lane] = millis();
@@ -133,17 +140,17 @@ void loop()
 
   // Determine the positions.
   // Compare each lane with the other lanes to count how many are ahead of them
-  for (int lane = 0; lane < LaneCount; lane++)
+  for (int lane = 0; lane < laneCount; lane++)
   {
     int aheadOfMe = 0;
-    for (int otherLane = 0; otherLane < LaneCount; otherLane++)
+    for (int otherLane = 0; otherLane < laneCount; otherLane++)
     {
       // Skip comparing a lane to itself
       if (lane == otherLane)
         continue;
 
       // If they have gone more laps, they are ahead of me
-      if (LapCounter[lane] < LapCounter[otherLane])
+      if (lapCounter[lane] < lapCounter[otherLane])
       {
         aheadOfMe++;
         continue;
@@ -151,8 +158,8 @@ void loop()
       else
         // If they have gone the same number of laps but
         // they got there first, they're ahead of me.
-        if (LapCounter[lane] == LapCounter[otherLane] &&
-            TimeOfLastLap[lane] > TimeOfLastLap[otherLane])
+        if (lapCounter[lane] == lapCounter[otherLane] &&
+            timeOfLastLap[lane] > timeOfLastLap[otherLane])
         {
           aheadOfMe++;
           continue;
@@ -160,10 +167,10 @@ void loop()
     }
 
     // Compared against all other lanes so 'aheadOfMe gives my position
-    LanePosition[lane] = aheadOfMe;
+    lanePosition[lane] = aheadOfMe;
 
     // Display the position for this lane
     lcd.setCursor(18, lane);
-    lcd.print(PlaceNames[LanePosition[lane]]);
+    lcd.print(placeNames[lanePosition[lane]]);
   }
 }
