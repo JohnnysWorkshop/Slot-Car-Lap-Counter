@@ -1,0 +1,169 @@
+/*******PHASE 1.3*******
+ * 
+ * This is an on going project.
+ * You are welcome to use it and share it.
+ * 
+ * Updates:
+ * - best lap,
+ * - current lap,
+ * - code logistic.
+ * (Big thanks to Arduino community)
+ *
+ * Requirements:
+ * - Arduino uno,
+ * - momentary switches,(pins: 8, 9, 10, 11, GRND)
+ * - lcd display,(regular I2C pins: A5, A4, VCC, GRND)
+ * - breadboard,
+ * - and jump wires.
+ * 
+*/
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+LiquidCrystal_I2C lcd(0x3F,20,4);
+
+const byte LaneCount = 4;
+const char *PlaceNames[] = {"P1", "P2", "P3", "P4"};
+const byte LaneSensorPins[] = {8, 9, 10, 11};
+
+// Global variables default to zero
+boolean LanePreviousState[LaneCount];
+int LapCounter[LaneCount];
+unsigned long TimeOfLastLap[LaneCount];
+int LanePosition[LaneCount];
+
+//****NEW CODE******
+int lanePeriod[LaneCount];
+unsigned long timeNow[LaneCount];
+unsigned long carTimeLap[LaneCount];
+unsigned long carStart[LaneCount];
+unsigned long carBest[LaneCount];
+float lastLap[LaneCount];
+float bestLap[LaneCount];
+boolean firstLap[LaneCount];
+boolean newBest[LaneCount];
+//******************
+
+void setup()
+{
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("********************");
+  lcd.setCursor(1,1);
+  lcd.print("Johnny's  Workshop");
+  lcd.setCursor(0,2);
+  lcd.print("Slot Car Lap Counter");
+  lcd.setCursor(0,3);
+  lcd.print("********************");
+  delay(2000);
+  lcd.clear();
+  
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    pinMode(LaneSensorPins[lane], INPUT_PULLUP);
+//***********NEW CODE*****************
+    carStart[lane] = millis();
+    carBest[lane] = 9999;
+    lastLap[lane] = 00.00;
+    bestLap[lane] = 00.00;
+    firstLap[lane] = true;
+    newBest[lane] = false;
+//************************************
+  }
+}
+void loop()
+{
+  boolean newData = false;  // Set when a lap crossing happens
+
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    boolean laneState = digitalRead(LaneSensorPins[lane]) == LOW;
+
+    if (laneState != LanePreviousState[lane])
+    {
+      LanePreviousState[lane] = laneState;
+
+      if (laneState)  // Just went active
+      {
+        LapCounter[lane]++;
+        TimeOfLastLap[lane] = millis();
+        newData = true;
+        lcd.setCursor(0, lane);
+        lcd.print(LapCounter[lane]);
+
+//********NEW CODE*******************************************************
+        timeNow[lane] = millis();
+        carTimeLap[lane] = millis() - carStart[lane];
+        carStart[lane] = millis();
+        lastLap[lane] = carTimeLap[lane] / 1000.00;
+        if (firstLap[lane] == true)
+        {
+          lcd.setCursor(10,lane);
+          lcd.print("-");
+          lcd.setCursor(5,lane);
+          lcd.print("HOT");
+          lcd.setCursor(12,lane);
+          lcd.print("LAP");
+        }
+        if (firstLap[lane] != true){
+          lcd.setCursor(4,lane);
+          lcd.print("      ");
+          lcd.setCursor(4,lane);
+          lcd.print(lastLap[lane]);
+        }
+        if (carTimeLap[lane] < carBest[lane] && firstLap[lane] != true){
+          carBest[lane] = carTimeLap[lane];
+          bestLap[lane] = lastLap[lane];
+          lcd.setCursor(12,lane);
+          lcd.print("      ");
+          lcd.setCursor(12,lane);
+          lcd.print(bestLap[lane]);
+          newBest[lane] = true;
+        }   
+        firstLap[lane] = false;
+        if (newBest[lane] == true)newBest[lane] = false;
+//**************************************************************************
+      }
+    }
+  }
+  // If nobody finished a lap, we're done
+  if (!newData)
+    return;
+
+  // Determine the positions.
+  // Compare each lane with the other lanes to count how many are ahead of them
+  for (int lane = 0; lane < LaneCount; lane++)
+  {
+    int aheadOfMe = 0;
+    for (int otherLane = 0; otherLane < LaneCount; otherLane++)
+    {
+      // Skip comparing a lane to itself
+      if (lane == otherLane)
+        continue;
+
+      // If they have gone more laps, they are ahead of me
+      if (LapCounter[lane] < LapCounter[otherLane])
+      {
+        aheadOfMe++;
+        continue;
+      }
+      else
+        // If they have gone the same number of laps but
+        // they got there first, they're ahead of me.
+        if (LapCounter[lane] == LapCounter[otherLane] &&
+            TimeOfLastLap[lane] > TimeOfLastLap[otherLane])
+        {
+          aheadOfMe++;
+          continue;
+        }
+    }
+
+    // Compared against all other lanes so 'aheadOfMe gives my position
+    LanePosition[lane] = aheadOfMe;
+
+    // Display the position for this lane
+    lcd.setCursor(18, lane);
+    lcd.print(PlaceNames[LanePosition[lane]]);
+  }
+}
