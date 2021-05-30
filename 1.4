@@ -51,7 +51,6 @@ int lapCounter[laneCount];
 unsigned long timeOfLastLap[laneCount];
 int lanePosition[laneCount];
 
-unsigned long timeNow[laneCount];
 unsigned long carTimeLap[laneCount];
 unsigned long carStart[laneCount];
 unsigned long carBest[laneCount];
@@ -195,7 +194,6 @@ void loop()
           newData = true;
           lcd.setCursor(0, lane);
           lcd.print(lapCounter[lane]);
-          timeNow[lane] = millis();
           carTimeLap[lane] = millis() - carStart[lane];
           carStart[lane] = millis();
           lastLap[lane] = carTimeLap[lane] / 1000.00;
